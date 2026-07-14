@@ -6,7 +6,7 @@
 import type { NewsItem } from "./googleNews.ts";
 import type { Disclosure } from "./tdnet.ts";
 
-const MODEL = "gemini-2.5-flash-lite";
+const MODEL = "gemini-3.1-flash-lite";
 
 export interface AnalysisResult {
   summary: string | null;
