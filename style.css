@@ -316,6 +316,8 @@ body {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
+  position: relative;
+  height: 380px;
 }
 
 .trend-table-wrap {

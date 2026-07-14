@@ -4,3 +4,4 @@ node_modules/
 .DS_Store
 *.local.sql
 supabase/.temp/
+.claude/scheduled_tasks.lock

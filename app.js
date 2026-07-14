@@ -313,12 +313,17 @@ function renderTickerChanges() {
 });
 
 // ---------- タブ切り替え ----------
+// Chart.jsは非表示(display:none)のタブ内で初期化されるとcanvasが0サイズのまま固定されるため、
+// タブを表示状態にした直後に明示的にresize()して正しいサイズへ再計算させる。
 document.querySelectorAll(".tab-button").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-button").forEach((b) => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+
+    if (btn.dataset.tab === "intraday") intradayChartInstance?.resize();
+    if (btn.dataset.tab === "trend") trendChartInstance?.resize();
   });
 });
 
@@ -403,6 +408,7 @@ async function loadIntradayChart() {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { labels: { color: "#e8ecf4" } },
       },
@@ -571,6 +577,7 @@ async function loadTrendChart() {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { labels: { color: "#e8ecf4" } },
       },

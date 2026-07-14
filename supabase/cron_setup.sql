@@ -14,6 +14,7 @@ select vault.create_secret('<SERVICE_ROLE_KEY>', 'jp_stock_service_role_key');
 -- 時刻はUTC指定（日本時間 = UTC+9）。
 --   09:00-15:00 JST（取引時間帯を広めにカバー、function側で正確な時間外判定を行う） = 00:00-06:59 UTC
 --   16:30 JST（日次分析） = 07:30 UTC
+--   17:15 JST（分析待ち銘柄の再試行、日次分析の45分後） = 08:15 UTC
 --   毎週月曜07:00 JST（週次選定） = 日曜22:00 UTC
 --   毎年12/1 00:00 UTC（市場カレンダー年次更新）
 
@@ -40,6 +41,20 @@ select cron.schedule(
   $$
   select net.http_post(
     url := 'https://jkacguhaabaqtrjaahgl.supabase.co/functions/v1/jp-stock-daily-digest',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'jp_stock_service_role_key'),
+      'Content-Type', 'application/json'
+    )
+  );
+  $$
+);
+
+select cron.schedule(
+  'jp-stock-reanalyze-pending',
+  '15 8 * * 1-5',
+  $$
+  select net.http_post(
+    url := 'https://jkacguhaabaqtrjaahgl.supabase.co/functions/v1/jp-stock-reanalyze-pending',
     headers := jsonb_build_object(
       'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'jp_stock_service_role_key'),
       'Content-Type', 'application/json'
