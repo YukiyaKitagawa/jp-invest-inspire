@@ -108,7 +108,7 @@ function jstDateKey(input = new Date()) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(input);
+  }).formatToParts(new Date(input));
   const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
   return `${map.year}-${map.month}-${map.day}`;
 }
@@ -360,19 +360,26 @@ async function fetchIntradayHistory(symbol) {
   return data ?? [];
 }
 
+let intradayRequestId = 0;
+
 async function loadIntradayChart() {
   const symbol = els.intradayTickerSelect.value;
   if (!symbol) return;
+
+  const requestId = ++intradayRequestId;
 
   let history = [];
   try {
     history = await fetchIntradayHistory(symbol);
   } catch (err) {
+    if (requestId !== intradayRequestId) return; // 選択が変わった後に届いた古いレスポンスは無視
     els.intradayEmptyState.style.display = "block";
     els.intradayEmptyState.textContent = `データの取得に失敗しました: ${err.message}`;
     els.intradayChart.style.display = "none";
     return;
   }
+
+  if (requestId !== intradayRequestId) return; // 選択が変わった後に届いた古いレスポンスは無視
 
   if (history.length === 0) {
     els.intradayEmptyState.style.display = "block";
@@ -527,34 +534,45 @@ async function fetchTickerHistory(symbol) {
   return data ?? [];
 }
 
+let trendRequestId = 0;
+
 async function loadTrendChart() {
   const symbol = els.trendTickerSelect.value;
   if (!symbol) return;
 
-  let history = [];
+  // クリック時点のperiodをローカルに固定する。currentPeriod(グローバル)をawait後に読むと、
+  // 応答待ちの間に別のperiodボタンが押された場合に古い/新しい呼び出しが混線しうるため。
+  const period = currentPeriod;
+  const requestId = ++trendRequestId;
+
   try {
-    history = await fetchTickerHistory(symbol);
+    const history = await fetchTickerHistory(symbol);
+    if (requestId !== trendRequestId) return; // 選択が変わった後に届いた古いレスポンスは無視
+
+    if (history.length === 0) {
+      els.trendEmptyState.style.display = "block";
+      els.trendEmptyState.textContent = "この銘柄のデータがまだありません。";
+      els.trendChart.style.display = "none";
+      els.trendTableBody.innerHTML = "";
+      return;
+    }
+
+    renderTrendChart(history, period);
   } catch (err) {
+    if (requestId !== trendRequestId) return;
     els.trendEmptyState.style.display = "block";
     els.trendEmptyState.textContent = `データの取得に失敗しました: ${err.message}`;
     els.trendChart.style.display = "none";
-    return;
   }
+}
 
-  if (history.length === 0) {
-    els.trendEmptyState.style.display = "block";
-    els.trendEmptyState.textContent = "この銘柄のデータがまだありません。";
-    els.trendChart.style.display = "none";
-    els.trendTableBody.innerHTML = "";
-    return;
-  }
-
-  const points = aggregateByPeriod(history, currentPeriod);
+function renderTrendChart(history, period) {
+  const points = aggregateByPeriod(history, period);
 
   els.trendEmptyState.style.display = "none";
   els.trendChart.style.display = "block";
 
-  const labels = points.map((p) => periodLabel(p.key, currentPeriod));
+  const labels = points.map((p) => periodLabel(p.key, period));
   const prices = points.map((p) => Number(p.current_price));
 
   if (trendChartInstance) {
@@ -594,7 +612,7 @@ async function loadTrendChart() {
     const sentimentLabel = SENTIMENT_LABELS[p.market_sentiment] ?? "-";
     return `
       <tr>
-        <td>${periodLabel(p.key, currentPeriod)}</td>
+        <td>${periodLabel(p.key, period)}</td>
         <td>${formatYen(p.current_price)}</td>
         <td class="price-change ${changeClass}">${changeSign}${Number(p.price_change_pct ?? 0).toFixed(2)}%</td>
         <td>${sentimentLabel}</td>
