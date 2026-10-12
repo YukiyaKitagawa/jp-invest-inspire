@@ -16,6 +16,7 @@ export async function fetchTodayDisclosures(tickerSymbol: string): Promise<Discl
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; jp-stock-dashboard/1.0)" },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();

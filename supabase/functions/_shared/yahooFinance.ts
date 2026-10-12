@@ -25,6 +25,7 @@ export async function fetchLatestQuotes(tickerSymbols: string[]): Promise<Latest
         const url = `${CHART_BASE}/${symbol}?interval=1m&range=1d`;
         const res = await fetch(url, {
           headers: { "User-Agent": "Mozilla/5.0 (compatible; jp-stock-dashboard/1.0)" },
+          signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
@@ -68,6 +69,7 @@ export async function fetchFundamentalMetrics(tickerSymbol: string): Promise<Fun
     const url = `${QUOTE_SUMMARY_BASE}/${symbol}?modules=${modules}`;
     const res = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; jp-stock-dashboard/1.0)" },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
